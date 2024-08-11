@@ -1,0 +1,10 @@
+faicons
+shiny
+seaborn
+pandas
+nilearn
+hcp_utils
+shinywidgets
+numpy
+pandas
+scikit-learn

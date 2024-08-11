@@ -6,7 +6,7 @@ A Shiny app to visualize differences in multivariate test-retest reliability of 
 ```
 python3 -m pip install -r requirements.txt
 ```
-- Then run this code
+- Then to deploy with rsconnect,
 ```
 cd ..
 rsconnect deploy shiny movie_stuff --name vanderlab --title movie_stuff

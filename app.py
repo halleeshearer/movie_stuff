@@ -7,7 +7,7 @@ import shinywidgets
 from shinywidgets import output_widget, render_widget
 
 # Import data from shared.py
-from shared import app_dir, df
+from shared import app_dir
 
 from shiny import App, reactive, render, ui
 
@@ -85,7 +85,7 @@ app_ui = ui.page_sidebar(
             height = "600px"),
     ),
 #h1(strong("Title"), style = "font-size:500px;")
-    ui.div(ui.h3("Study Summary", style = "font-size:20px"), ui.help_text("See Shearer et al. (under revision) for more details")),
+    ui.div(ui.h3("Study Summary", style = "font-size:20px"), ui.help_text("See Shearer et al. (2024) for more details")),
 
     ui.accordion(
         ui.accordion_panel("Dataset", "HCP 7T release (Van Essen et al., 2013). TR = 1000 ms. N = 109."),
@@ -104,10 +104,13 @@ app_ui = ui.page_sidebar(
     ui.include_css(app_dir / "styles.css"),
     #title="Movie Stuff",
     title =    ui.div(
-        ui.h1("Movie Stuff"),
-        ui.h1("Explore test-retest reliability measures between movie-watching and resting-state functional connectivity.", style = "font-size:15px"),
+        ui.h1("Comparing reliability-based measures of functional connectivity between movie and rest: an ROI-based approach", style = "font-size:24px"),
         ui.h4(),
-        ui.help_text("Results from Shearer et al. (under revision)", style = "font-size:12px"),
+        ui.help_text("Results from ", style = "font-size:12px"),
+        ui.tags.a("Shearer et al. (2024)",
+              href= 'https://doi.org/10.1162/imag_a_00411',
+              target='_blank',
+              style = "font-size:12px"),
         style="text-align: left; margin-bottom: 20px;"
     ),
     fillable=True,

@@ -22,6 +22,25 @@ from icons import question_circle_fill
 # import data from all_rois_mv_results
 data = pd.read_csv("all_rois_mv_results.csv")
 
+# google analytics:
+analytics = """
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1MJNCPP0ND"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-1MJNCPP0ND');
+</script>
+"""
+
+# import Glasser parcellation label names
+file_path = "Glasser_2016_Table.csv"
+glasser_data = pd.read_csv(file_path, header = 1)
+glasser_data = glasser_data[['Parcel\nIndex', 'Area\nName', 'Area\xa0Description']]
+glasser_data.columns = ["Parcel Index", "Area Name", "Area Description"]
+
 glasser = hcp.mmp.labels
 # delete the first key in the dictionary
 del glasser[0]
@@ -42,8 +61,8 @@ options.update(glasser_int_keys)
 #     ),
 
 app_ui = ui.page_sidebar(
-    
     ui.sidebar(
+        ui.tags.head(ui.HTML(analytics)),  # Add Google Analytics script here
         # ui.input_select(
         #     "measure",
         #     "Reliability measure",
@@ -52,7 +71,7 @@ app_ui = ui.page_sidebar(
         # ),
         ui.input_select(
             "plot",
-            ui.tooltip(ui.span("Plot ", question_circle_fill), "Choose to plot the reliability of movie-watching, resting-state, or the difference between movie and rest."),
+            ui.tooltip(ui.span("Select a condition to plot ", question_circle_fill), "Choose to plot the reliability of movie-watching, resting-state, the difference between movie and rest, or significant differences only."),
             {"m" : "Movie", "r" : "Rest", "diff" : "Movie-Rest Difference", "m_better" : "Significant Differences"},
             selected = ["diff"],
         ),
@@ -63,6 +82,21 @@ app_ui = ui.page_sidebar(
             # use hcp.mmp.labels as the dictionary of the regions
             options,
         ),
+
+        # add a button with a link to the Glasser parcellation paper:
+        ui.tags.a("Glasser Parcellation",
+              href= 'https://balsa.wustl.edu/WN56',
+              target='_blank',
+              style = "font-size:12px"),
+
+        ui.help_text("Use the table below to look up the Glasser parcel description or number."),
+        
+        ui.output_data_frame("glasser_table"),
+        style = "font-size:12px",
+        width = "300px",
+        #style="width: 300px;",
+
+
     ),
 
     ui.help_text("Click and drag brains to rotate."), 
@@ -71,18 +105,18 @@ app_ui = ui.page_sidebar(
         ui.card(
             ui.card_header("I2C2"),
             ui.output_ui("i2c2"),
-            ui.input_slider("i2c2_max", "Range to plot", min=0, max=1, value=[0.0, 0.3], step=0.05),
-            height = "600px"),
+            ui.input_slider("i2c2_max", "Range to plot", min=0, max=1, value=[0.05, 1], step=0.05),
+            height = "700px"),
         ui.card(
             ui.card_header("Discriminability"),
             ui.output_ui("discr"),
-            ui.input_slider("discr_max", "Range to plot", min=0, max=1, value=[0.0, 0.3], step=0.05),
-            height = "600px"),
+            ui.input_slider("discr_max", "Range to plot", min=0, max=1, value=[0.05, 1], step=0.05),
+            height = "700px"),
         ui.card(
             ui.card_header("Fingerprinting"),
             ui.output_ui("finger"),
-            ui.input_slider("finger_max", "Range to plot", min=0, max=1, value=[0.0, 0.3], step=0.05),
-            height = "600px"),
+            ui.input_slider("finger_max", "Range to plot", min=0, max=1, value=[0.05, 1], step=0.05),
+            height = "700px"),
     ),
 #h1(strong("Title"), style = "font-size:500px;")
     ui.div(ui.h3("Study Summary", style = "font-size:20px"), ui.help_text("See Shearer et al. (2024) for more details")),
@@ -180,7 +214,7 @@ def server(input, output, session):
         if input.plot() == "diff":
             return "Movie - Rest Value"
         if input.plot() == "m_better":
-            return "Significant differences"
+            return "Significant differences (Red: M>R)"
         
     @reactive.calc
     def color_map():
@@ -204,62 +238,66 @@ def server(input, output, session):
         if input.plot() == "m_better":
             return True
         
-    @reactive.calc
-    def vmin():
-        if input.plot() == "m":
-            return 0
-        if input.plot() == "r":
-            return 0
-        if input.plot() == "diff":
-            return -0.3
-        if input.plot() == "m_better":
-            return -1
+    # @reactive.calc
+    # def vmin():
+    #     if input.plot() == "m":
+    #         return 0
+    #     if input.plot() == "r":
+    #         return 0
+    #     # if input.plot() == "diff":
+    #     #     return -0.3
+    #     # if input.plot() == "m_better":
+    #     #     return -1
         
-    @reactive.effect
-    def update_range():
-        input.plot()
-        if input.plot() == "m":
-            ui.update_select("i2c2_max", selected=[0.05, 1])
-            ui.update_select("discr_max", selected=[0.05, 1])
-            ui.update_select("finger_max", selected=[0.05, 1])
+    # @reactive.effect
+    # def update_range():
+    #     input.plot()
+    #     if input.plot() == "m":
+    #         ui.update_select("i2c2_max", selected=[0.05, 1])
+    #         ui.update_select("discr_max", selected=[0.05, 1])
+    #         ui.update_select("finger_max", selected=[0.05, 1])
 
-        if input.plot() == "r":
-            ui.update_select("i2c2_max", selected=[0.05, 1])
-            ui.update_select("discr_max", selected=[0.05, 1])
-            ui.update_select("finger_max", selected=[0.05, 1])
+    #     if input.plot() == "r":
+    #         ui.update_select("i2c2_max", selected=[0.05, 1])
+    #         ui.update_select("discr_max", selected=[0.05, 1])
+    #         ui.update_select("finger_max", selected=[0.05, 1])
 
-        if input.plot() == "diff":
-            ui.update_select("i2c2_max", selected=[0.05, 0.3])
-            ui.update_select("discr_max", selected=[0.05, 0.3])
-            ui.update_select("finger_max", selected=[0.05, 0.3])
+    #     if input.plot() == "diff":
+    #         ui.update_select("i2c2_max", selected=[0.05, 1])
+    #         ui.update_select("discr_max", selected=[0.05, 1])
+    #         ui.update_select("finger_max", selected=[0.05, 1])
 
-        if input.plot() == "m_better":
-            ui.update_select("i2c2_max", selected=[0.05, 1])
-            ui.update_select("discr_max", selected=[0.05, 1])
-            ui.update_select("finger_max", selected=[0.05, 1])
+    #     if input.plot() == "m_better":
+    #         ui.update_select("i2c2_max", selected=[0.05, 1])
+    #         ui.update_select("discr_max", selected=[0.05, 1])
+    #         ui.update_select("finger_max", selected=[0.05, 1])
 
 
     @render.ui
     def i2c2():
-        surf_plot = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(hcp.unparcellate(filtered_df_i2c2(), hcp.mmp)), cmap=color_map(), bg_map=hcp.mesh.sulc, threshold = input.i2c2_max()[0], symmetric_cmap = symmetric(), vmin = vmin(), vmax = input.i2c2_max()[1], colorbar = True, title = colorbar_title(), title_fontsize = 15)
+        surf_plot = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(hcp.unparcellate(filtered_df_i2c2(), hcp.mmp)), cmap=color_map(), bg_map=hcp.mesh.sulc, threshold = input.i2c2_max()[0], symmetric_cmap = symmetric(), vmax = input.i2c2_max()[1], colorbar = True, title = colorbar_title(), title_fontsize = 15, colorbar_fontsize=10)
         surf_plot.resize(300, 300)
         html = surf_plot.get_iframe() # get_iframe() or get_standalone()
         return ui.HTML(html) 
 
     @render.ui
     def discr():
-        surf_plot = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(hcp.unparcellate(filtered_df_discr(), hcp.mmp)), cmap=color_map(), bg_map=hcp.mesh.sulc, threshold = input.discr_max()[0], symmetric_cmap = symmetric(), vmin = vmin(), vmax = input.discr_max()[1], colorbar = True, title = colorbar_title(), title_fontsize = 15)
+        surf_plot = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(hcp.unparcellate(filtered_df_discr(), hcp.mmp)), cmap=color_map(), bg_map=hcp.mesh.sulc, threshold = input.discr_max()[0], symmetric_cmap = symmetric(), vmax = input.discr_max()[1], colorbar = True, title = colorbar_title(), title_fontsize = 15, colorbar_fontsize=10)
         surf_plot.resize(300, 300)
         html = surf_plot.get_iframe() # get_iframe() or get_standalone()
         return ui.HTML(html) 
     
     @render.ui
     def finger():
-        surf_plot = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(hcp.unparcellate(filtered_df_finger(), hcp.mmp)), cmap=color_map(), bg_map=hcp.mesh.sulc, threshold = input.finger_max()[0], symmetric_cmap = symmetric(), vmin = vmin(), vmax = input.finger_max()[1], colorbar = True, title = colorbar_title(), title_fontsize = 15)
+        surf_plot = plotting.view_surf(hcp.mesh.inflated, hcp.cortex_data(hcp.unparcellate(filtered_df_finger(), hcp.mmp)), cmap=color_map(), bg_map=hcp.mesh.sulc, threshold = input.finger_max()[0], symmetric_cmap = symmetric(), vmax = input.finger_max()[1], colorbar = True, title = colorbar_title(), title_fontsize = 15, colorbar_fontsize=10)
         surf_plot.resize(300, 300)
         html = surf_plot.get_iframe() # get_iframe() or get_standalone()
         return ui.HTML(html) 
     
+    @output
+    @render.data_frame
+    def glasser_table():
+        return render.DataGrid(glasser_data)
 
 
 
